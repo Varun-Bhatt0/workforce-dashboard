@@ -1,0 +1,39 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+*.user
+*.suo
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+*.swp
+
+# Test results
+TestResults/
+*.trx
+coverage*/
+
+# Secrets and local configuration: never commit these
+appsettings.*.local.json
+*.env
+.env*
+secrets.json
+
+# Original working material kept outside the public repo (spreadsheets, reports, emails)
+read/
+private/
+*.xlsx
+*.pptx
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

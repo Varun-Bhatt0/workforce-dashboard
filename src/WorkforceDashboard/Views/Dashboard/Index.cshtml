@@ -1,0 +1,191 @@
+@using System.Globalization
+@using System.Text.Json
+@model DashboardPageModel
+@{
+    var d = Model.Data;
+    var k = d.Kpis;
+    ViewData["Title"] = d.ScopeLabel;
+    var json = JsonSerializer.Serialize(d, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    string N(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
+    string Href(string scope) => Url.Content($"~/?scope={Uri.EscapeDataString(scope)}&year={d.Year}&cadre={CadreNames.QueryValue(CadreFromDisplay(d.Cadre))}");
+    static Cadre? CadreFromDisplay(string display) => CadreNames.TryParse(display, out var c) ? c : null;
+    var selectedCadre = CadreNames.QueryValue(CadreFromDisplay(d.Cadre));
+}
+
+<div class="app">
+    <aside class="sidebar" aria-label="Units">
+        <a class="brand" href="~/">
+            <img src="~/img/logo.svg" alt="" width="28" height="28" />
+            <span>Workforce<br /><strong>Analytics</strong></span>
+        </a>
+        <nav id="unit-nav">
+            <a class="nav-unit nav-all @(d.Scope == DashboardQuery.AllScope ? "active" : "")" href="@Href(DashboardQuery.AllScope)"
+               data-scope="@DashboardQuery.AllScope" aria-current="@(d.Scope == DashboardQuery.AllScope ? "page" : null)">All units</a>
+            @foreach (var g in Model.Sidebar.Groups)
+            {
+                <div class="nav-group">
+                    <a class="nav-group-title @(d.Scope == g.Scope ? "active" : "")" href="@Href(g.Scope)" data-scope="@g.Scope"
+                       aria-current="@(d.Scope == g.Scope ? "page" : null)">@g.Name</a>
+                    @foreach (var u in g.Units)
+                    {
+                        <a class="nav-unit @(d.Scope == u.Code ? "active" : "")" href="@Href(u.Code)" data-scope="@u.Code"
+                           aria-current="@(d.Scope == u.Code ? "page" : null)" title="@u.Name">
+                            <span class="code">@u.Code</span><span class="name">@u.Name</span>
+                        </a>
+                    }
+                </div>
+            }
+        </nav>
+        <p class="sidebar-foot" id="sidebar-note" hidden="@(!d.IsSample)">Sample data · all figures are synthetic</p>
+    </aside>
+
+    <main class="content" id="main">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow" id="scope-detail">@d.ScopeDetail</p>
+                <h1 id="scope-label">@d.ScopeLabel</h1>
+                <p class="subtitle">Headcount as of <span id="as-of">1 April @d.Year</span> · <span id="cadre-label">@(d.Cadre == CadreNames.All ? "all cadres" : d.Cadre + "s")</span></p>
+            </div>
+            <form class="filters" id="filters" method="get" action="~/">
+                <input type="hidden" name="scope" value="@d.Scope" id="scope-input" />
+                <label class="filter">
+                    <span>Year</span>
+                    <select name="year" id="year-select" class="form-select form-select-sm">
+                        @foreach (var y in d.Years.Reverse())
+                        {
+                            <option value="@y" selected="@(y == d.Year)">@y</option>
+                        }
+                    </select>
+                </label>
+                <fieldset class="filter segmented" id="cadre-group">
+                    <legend>Cadre</legend>
+                    <div class="seg-buttons">
+                    @foreach (var (value, label) in new[] { ("all", "All"), ("executive", "Executives"), ("non-executive", "Non-executives") })
+                    {
+                        <input type="radio" class="btn-check" name="cadre" id="cadre-@value" value="@value" checked="@(selectedCadre == value)" autocomplete="off" />
+                        <label for="cadre-@value">@label</label>
+                    }
+                    </div>
+                </fieldset>
+                <noscript><button type="submit" class="btn btn-sm btn-primary">Apply</button></noscript>
+                <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch colour theme" title="Switch colour theme">
+                    <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+                </button>
+            </form>
+        </header>
+
+        <div id="notices" aria-live="polite">
+            @if (Model.Warning is not null)
+            {
+                <div class="notice notice-warning" role="status">@Model.Warning Showing the default view instead.</div>
+            }
+            @if (d.Notice is not null)
+            {
+                <div class="notice notice-warning" role="status">@d.Notice</div>
+            }
+        </div>
+
+        <section class="kpis" aria-label="Key figures">
+            <article class="kpi kpi-hero">
+                <h2>Headcount</h2>
+                <p class="kpi-value" id="kpi-manpower">@N(k.Manpower)</p>
+                <p class="kpi-note" id="kpi-change">
+                    @if (k.ChangeFromPreviousYear is int change)
+                    {
+                        <span class="delta @(change < 0 ? "down" : "up")">@(change < 0 ? "▼" : "▲") @N(Math.Abs(change)) (@(k.ChangePercent?.ToString("0.0", CultureInfo.InvariantCulture))%)</span>
+                        <text> vs @(d.Year - 1)</text>
+                    }
+                    else
+                    {
+                        <text>First year in the data</text>
+                    }
+                </p>
+            </article>
+            <article class="kpi">
+                <h2>Works share</h2>
+                <p class="kpi-value" id="kpi-works">@k.WorksShare.ToString("0.0", CultureInfo.InvariantCulture)%</p>
+                <p class="kpi-note">of headcount in plant operations</p>
+            </article>
+            <article class="kpi">
+                <h2>Average age</h2>
+                <p class="kpi-value" id="kpi-age">@k.AverageAge.ToString("0.0", CultureInfo.InvariantCulture)</p>
+                <p class="kpi-note">years, weighted by headcount</p>
+            </article>
+            <article class="kpi">
+                <h2>Women</h2>
+                <p class="kpi-value" id="kpi-female">@k.FemaleShare.ToString("0.0", CultureInfo.InvariantCulture)%</p>
+                <p class="kpi-note">of headcount</p>
+            </article>
+            <article class="kpi">
+                <h2>Attrition</h2>
+                <p class="kpi-value" id="kpi-attrition">@k.AttritionRate.ToString("0.0", CultureInfo.InvariantCulture)%</p>
+                <p class="kpi-note" id="kpi-flows">@N(k.Recruitments) joined · @N(k.Separations) left</p>
+            </article>
+        </section>
+
+        <section class="grid">
+            <article class="card card-wide">
+                <header class="card-head">
+                    <div>
+                        <h2 id="trend-title">Headcount over time</h2>
+                        <p class="card-sub">Snapshot on 1 April each year</p>
+                    </div>
+                    <label class="filter filter-inline">
+                        <span class="visually-hidden">Break down by</span>
+                        <select id="trend-select" class="form-select form-select-sm">
+                            <option value="total">Total</option>
+                            <option value="cadre">By cadre</option>
+                            <option value="function">By function</option>
+                            <option value="gender">By gender</option>
+                            <option value="qualification">By qualification</option>
+                        </select>
+                    </label>
+                </header>
+                <div class="chart chart-tall"><canvas id="chart-trend" role="img" aria-label="Headcount by year"></canvas></div>
+                <details class="data-table" data-for="trend"><summary>View data</summary><div class="table-wrap"></div></details>
+            </article>
+
+            <article class="card">
+                <header class="card-head"><div><h2>Recruitments and separations</h2><p class="card-sub">In the twelve months to each snapshot</p></div></header>
+                <div class="chart chart-tall"><canvas id="chart-flows" role="img" aria-label="Recruitments and separations by year"></canvas></div>
+                <details class="data-table" data-for="flows"><summary>View data</summary><div class="table-wrap"></div></details>
+            </article>
+
+            <article class="card">
+                <header class="card-head"><div><h2>By function</h2><p class="card-sub">Where people work</p></div></header>
+                <div class="chart"><canvas id="chart-function" role="img" aria-label="Headcount by function"></canvas></div>
+                <details class="data-table" data-for="function"><summary>View data</summary><div class="table-wrap"></div></details>
+            </article>
+
+            <article class="card">
+                <header class="card-head"><div><h2>By qualification</h2><p class="card-sub">Highest qualification held</p></div></header>
+                <div class="chart"><canvas id="chart-qualification" role="img" aria-label="Headcount by qualification"></canvas></div>
+                <details class="data-table" data-for="qualification"><summary>View data</summary><div class="table-wrap"></div></details>
+            </article>
+
+            <article class="card">
+                <header class="card-head"><div><h2>By cadre and gender</h2><p class="card-sub">Executives vs non-executives; men vs women</p></div></header>
+                <div class="chart"><canvas id="chart-people" role="img" aria-label="Headcount by cadre and by gender"></canvas></div>
+                <details class="data-table" data-for="people"><summary>View data</summary><div class="table-wrap"></div></details>
+            </article>
+
+            <article class="card card-wide" id="card-units" hidden="@(d.UnitComparison.Labels.Count == 0)">
+                <header class="card-head"><div><h2>By unit</h2><p class="card-sub">Headcount of each unit in this selection</p></div></header>
+                <div class="chart chart-units"><canvas id="chart-units" role="img" aria-label="Headcount by unit"></canvas></div>
+                <details class="data-table" data-for="units"><summary>View data</summary><div class="table-wrap"></div></details>
+            </article>
+        </section>
+
+        <footer class="page-foot">
+            Data source: <span id="data-source">@d.DataSource</span><span id="sample-note" hidden="@(!d.IsSample)"> · All figures are synthetic and for demonstration only.</span>
+        </footer>
+    </main>
+</div>
+
+<script type="application/json" id="dashboard-data">@Html.Raw(json)</script>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+}

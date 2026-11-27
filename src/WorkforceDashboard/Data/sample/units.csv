@@ -1,0 +1,15 @@
+unit_code,unit_name,unit_group,sort_order
+NPW,North Plant,Integrated plants,1
+EPW,East Plant,Integrated plants,2
+SPW,South Plant,Integrated plants,3
+WPW,West Plant,Integrated plants,4
+CPW,Central Plant,Integrated plants,5
+ASW,Alloy Steel Works,Special plants,6
+SSW,Special Steel Works,Special plants,7
+RMW,Rolling Mill Works,Special plants,8
+RDC,Research & Development Centre,Other units,9
+ENG,Engineering & Technology,Other units,10
+MKT,Central Marketing,Other units,11
+RMD,Raw Materials Division,Other units,12
+CORP,Corporate Office,Other units,13
+TRG,Training Institute,Other units,14

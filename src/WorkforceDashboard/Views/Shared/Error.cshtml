@@ -1,0 +1,11 @@
+@model ErrorPageModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+<main class="error-page">
+    <img src="~/img/logo.svg" alt="" width="48" height="48" />
+    <h1>Something went wrong</h1>
+    <p>The dashboard couldn't load this page. Try again in a moment.</p>
+    <p class="text-secondary small">Reference: <code>@Model.RequestId</code></p>
+    <a class="btn btn-primary" href="/">Back to the dashboard</a>
+</main>

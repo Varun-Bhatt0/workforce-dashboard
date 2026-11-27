@@ -1,0 +1,47 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore WorkforceDashboard.slnx
+
+      - name: Build (warnings are errors)
+        run: dotnet build WorkforceDashboard.slnx --no-restore -c Release
+
+      - name: Test
+        run: dotnet test WorkforceDashboard.slnx --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+
+  sample-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Regenerate sample data
+        run: python tools/generate_sample_data.py
+      - name: Check committed data matches the generator
+        run: git diff --exit-code -- src/WorkforceDashboard/Data/sample db/oracle/sample_data.sql
